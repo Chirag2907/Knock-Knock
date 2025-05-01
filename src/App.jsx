@@ -3,8 +3,8 @@ import WebcamFeed from './Components/WebcamFeed';
 import './App.css';
 import { useState, useRef } from 'react';
 import { playSound } from './Sound';
-import * as Tone from 'tone';
-import { tickSampler } from './Sound';
+import { soundMap } from './Sound';
+import Features from './Components/Features';
 
 function App() {
   const [isRecording, setIsRecording] = useState(false);
@@ -15,35 +15,42 @@ function App() {
   const nextLoopId = useRef(1);
   const loopIntervals = useRef({});
 
-  const [bpm, setBpm] = useState(120);
-  const [isMetronomeOn, setIsMetronomeOn] = useState(false);
-  const [beatFlash, setBeatFlash] = useState(false);
-  
-  const scheduleMetronome = () => {
-    Tone.Transport.cancel(); // clear previous ticks
-    Tone.Transport.scheduleRepeat((time) => {
-      tickSampler.triggerAttackRelease('C3', '8n', time);
-      setBeatFlash(true);
-      setTimeout(() => setBeatFlash(false), 100);
-    }, '4n');
-  };
-  
 
-  const startMetronome = async () => {
-    await Tone.start();
-    Tone.Transport.bpm.value = bpm;
-    scheduleMetronome();
-    Tone.Transport.start();
-    setIsMetronomeOn(true);
+  const anyLoopPlaying = loops.some(loop => loop.isPlaying);
+  const loopTimeouts = useRef({});
+
+  const [volumes, setVolumes] = useState({
+    snare: 0.5,
+    kick: 0.5,
+    hihat: 0.5,
+    cymbal: 0.5,
+    percussion: 0.5,
+  });
+  const handleVolumeChange = (type, newVal) => {
+    const floatVal = parseFloat(newVal);
+    soundMap[type].volume(floatVal); // update actual volume
+    setVolumes((prev) => ({
+      ...prev,
+      [type]: floatVal, // ✅ update state so slider reflects
+    }));
   };
   
   
-  const stopMetronome = () => {
-    Tone.Transport.stop();
-    Tone.Transport.cancel(); // clears all scheduled events
-    setBeatFlash(false);
-    setIsMetronomeOn(false);
+  
+  const toggleAllLoops = () => {
+    if (anyLoopPlaying) {
+      // Stop all
+      loops.forEach((loop) => {
+        if (loop.isPlaying) toggleLoopPlayback(loop.id);
+      });
+    } else {
+      // Play all
+      loops.forEach((loop) => {
+        if (!loop.isPlaying) toggleLoopPlayback(loop.id);
+      });
+    }
   };
+
 
   const toggleRecording = () => {
     if (!isRecordingRef.current) {
@@ -52,7 +59,7 @@ function App() {
     } else {
       const newLoop = {
         id: nextLoopId.current++,
-        name: `Loop ${nextLoopId.current - 1}`,
+        name: `Recording #${nextLoopId.current - 1}`,
         events: currentRecording,
         isPlaying: false,
       };
@@ -65,13 +72,18 @@ function App() {
 
   const handleDrumHit = (sound) => {
     playSound(sound);
-
+  
     if (isRecordingRef.current) {
       const now = Date.now();
-      const entry = { sound, time: now - loopStart.current };
+      const entry = {
+        sound,
+        time: now - loopStart.current,
+        volume: volumes[sound], // 🎯 save snapshot of volume
+      };
       setCurrentRecording((prev) => [...prev, entry]);
     }
   };
+  
 
   const getLoopDuration = (events) => {
     if (events.length === 0) return 1000;
@@ -79,33 +91,54 @@ function App() {
   };
 
   const playLoopNow = (loop) => {
-    loop.events.forEach(({ sound, time }) => {
-      setTimeout(() => playSound(sound), time + 50); // 50ms latency fix
+    loopTimeouts.current[loop.id] = [];
+  
+    loop.events.forEach(({ sound, time, volume }) => {
+      const timeoutId = setTimeout(() => {
+        const howl = soundMap[sound];
+        if (howl) {
+          const prevVol = howl.volume();
+          howl.volume(volume || 1);
+          howl.play();
+          howl.volume(prevVol);
+        }
+      }, time + 50);
+  
+      loopTimeouts.current[loop.id].push(timeoutId); // ⏺️ store it
     });
   };
+  
 
   const toggleLoopPlayback = (loopId) => {
     const loopToPlay = loops.find((loop) => loop.id === loopId);
     if (!loopToPlay) return;
-
+  
     if (!loopToPlay.isPlaying) {
-      playLoopNow(loopToPlay); // 🔥 play immediately
-
+      // ✅ Start playback
+      playLoopNow(loopToPlay);
+  
       const intervalId = setInterval(() => {
         playLoopNow(loopToPlay);
       }, getLoopDuration(loopToPlay.events));
-
+  
       loopIntervals.current[loopId] = intervalId;
-
+  
       setLoops((prev) =>
         prev.map((loop) =>
           loop.id === loopId ? { ...loop, isPlaying: true } : loop
         )
       );
     } else {
+      // ✅ Stop playback
       clearInterval(loopIntervals.current[loopId]);
       delete loopIntervals.current[loopId];
-
+  
+      // ✅ Cancel any scheduled timeouts
+      if (loopTimeouts.current[loopId]) {
+        loopTimeouts.current[loopId].forEach(clearTimeout);
+        delete loopTimeouts.current[loopId];
+      }
+  
       setLoops((prev) =>
         prev.map((loop) =>
           loop.id === loopId ? { ...loop, isPlaying: false } : loop
@@ -113,6 +146,7 @@ function App() {
       );
     }
   };
+  
 
   const updateLoopName = (id, newName) => {
     setLoops((prev) =>
@@ -135,52 +169,58 @@ function App() {
       </nav>
 
       <div className="main-content">
-        <div className="left-panel">
-          <h2>Instructions</h2>
-          {['Index → Snare', 'Middle → Kick', 'Ring → Hi-hat', 'Pinky → Cymbal', 'Thumb → Percussion'].map((txt, i) => (
-            <div className="instruction-card" key={i}>
-              <img src={`/fingers/${txt.split(' ')[0].toLowerCase()}.png`} className="finger-img" alt={txt} />
-              <div>{txt}</div>
+      <div className="left-panel">
+        <h2>Drums</h2>
+        {[
+          { name: 'Snare', key: 'snare', finger: 'index' },
+          { name: 'Kick', key: 'kick', finger: 'middle' },
+          { name: 'Hi-hat', key: 'hihat', finger: 'ring' },
+          { name: 'Cymbal', key: 'cymbal', finger: 'pinky' },
+          { name: 'Percussion', key: 'percussion', finger: 'thumb' },
+        ].map(({ name, key, finger }) => (
+          <div className="instruction-card" key={key}>
+            <div className="instruction-left">
+              <img src={`/fingers/${finger}.png`} className="finger-img" alt={name} />
             </div>
-          ))}
-        </div>
+            <div className='name-volume'>
+              <div>{finger.charAt(0).toUpperCase() + finger.slice(1)} → {name}</div>
+              <div className="volume-percent">Volume: {Math.round(volumes[key] * 200)}%</div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volumes[key]}
+                onChange={(e) => handleVolumeChange(key, e.target.value)}
+                className="volume-slider"
+              />
+            </div>
+            
+          </div>
+        ))}
+      </div>
 
         <div className="center-panel">
           <WebcamFeed onDrumHit={handleDrumHit} />
-          <div className="metronome-controls">
-            <h3>Metronome</h3>
-            <input
-            type="range"
-            min="60"
-            max="180"
-            value={bpm}
-            onChange={(e) => {
-              const newBpm = parseInt(e.target.value);
-              setBpm(newBpm);
-              Tone.Transport.bpm.value = newBpm;
-              if (isMetronomeOn) {
-                scheduleMetronome(); // re-sync on the fly
-              }
-            }}
-          />
-            <div className="bpm-label">{bpm} BPM</div>
-
-            {!isMetronomeOn ? (
-              <button className="loop-btn" onClick={startMetronome}>▶ Start Metronome</button>
-            ) : (
-              <button className="loop-btn danger" onClick={stopMetronome}>⏹ Stop Metronome</button>
-            )}
-
-            <div className={`metronome-indicator ${beatFlash ? 'flash' : ''}`}></div>
-          </div>
+          
+          <Features loops={loops} />
+       
 
         </div>
 
 
         <div className="right-panel">
-          <h2>Loop Recorder</h2>
+          <h2 className='loop-heading'> Recorder</h2>
           <button className="loop-btn" onClick={toggleRecording}>
             {isRecording ? '⏹ Stop' : '⏺ Record'}
+          </button>
+
+          <button
+            className="loop-btn"
+            onClick={toggleAllLoops}
+            disabled={loops.length === 0}
+          >
+            {anyLoopPlaying ? '⏹ Stop All' : '▶ Play All'}
           </button>
 
           {loops.map((loop) => (
@@ -196,6 +236,11 @@ function App() {
               <button onClick={() => deleteLoop(loop.id)} className="loop-btn danger">❌ Delete</button>
             </div>
           ))}
+          {loops.length === 0 && (
+            <div className="empty-placeholder">
+              No recordings yet. Start recording to create a loop!
+            </div>
+          )}
         </div>
       </div>
     </div>

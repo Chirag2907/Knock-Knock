@@ -1,12 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import ReactSwitch from 'react-switch';
 
 const WebcamFeed = ({ onDrumHit }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const COOLDOWN = 200;
   const lastPlayedRef = useRef({});
-
-  useEffect(() => {
+  const cameraRef = useRef(null);
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const startCamera = () => {
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });
@@ -51,7 +53,7 @@ const WebcamFeed = ({ onDrumHit }) => {
         };
 
         const allBent = Object.values(fingerStates).every(Boolean);
-        if (allBent) return; // mute on full fist
+        if (allBent) return;
 
         const fingers = {
           snare: fingerStates.index,
@@ -91,12 +93,80 @@ const WebcamFeed = ({ onDrumHit }) => {
     });
 
     camera.start();
+    cameraRef.current = camera;
+  };
+
+  const stopCamera = () => {
+    cameraRef.current?.stop();
+    setIsCameraOn(false);
+  };
+
+  const resumeCamera = () => {
+    startCamera();
+    setIsCameraOn(true);
+  };
+
+  useEffect(() => {
+    startCamera();
+    return () => {
+      cameraRef.current?.stop();
+    };
   }, []);
 
   return (
     <div className="drum-wrapper">
       <video ref={videoRef} className="hidden" style={{ display: 'none' }}></video>
-      <canvas ref={canvasRef} className="drum-canvas" width={640} height={480} />
+
+      <div style={{ position: 'relative' }}>
+      {isCameraOn ? (
+        <canvas ref={canvasRef} className="drum-canvas" width={640} height={480} />
+      ) : (
+        <div
+          style={{
+            width: 640,
+            height: 480,
+            backgroundColor: '#111',
+            color: '#aaa',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            fontStyle: 'italic',
+            border: '5px #555',
+          }}
+        >
+          Camera is off
+        </div>
+      )}
+
+
+<div style={{
+        position: 'absolute',
+        bottom: '10px',
+        right: '10px',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '4px 8px',
+        borderRadius: '6px',
+        gap: '8px',
+        }}>
+        <label style={{ color: '#fff', fontSize: '0.9rem' }}>Camera</label>
+        <ReactSwitch
+            onChange={isCameraOn ? stopCamera : resumeCamera}
+            checked={isCameraOn}
+            onColor="#00ff99"
+            offColor="#888"
+            uncheckedIcon={false}
+            checkedIcon={false}
+            height={20}
+            width={36}
+            handleDiameter={20}
+        />
+        </div>
+
+</div>
+
+      
+
     </div>
   );
 };
