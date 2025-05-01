@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { playSound } from '../Sound';
 
-const WebcamFeed = () => {
+const WebcamFeed = ({ onDrumHit }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const COOLDOWN = 200;
@@ -52,7 +51,7 @@ const WebcamFeed = () => {
         };
 
         const allBent = Object.values(fingerStates).every(Boolean);
-        if (allBent) return; // 🤫 mute on full fist
+        if (allBent) return; // mute on full fist
 
         const fingers = {
           snare: fingerStates.index,
@@ -64,19 +63,18 @@ const WebcamFeed = () => {
         Object.entries(fingers).forEach(([sound, active]) => {
           const key = `${handedness}_${sound}`;
           if (active && (!lastPlayedRef.current[key] || now - lastPlayedRef.current[key] > COOLDOWN)) {
-            playSound(sound);
+            onDrumHit(sound);
             lastPlayedRef.current[key] = now;
           }
         });
 
-        // 👌 Thumb near middle MCP = percussion
         const thumbTip = landmarks[4];
         const middleBase = landmarks[9];
         const dist = Math.hypot(thumbTip.x - middleBase.x, thumbTip.y - middleBase.y);
         const percussionKey = `${handedness}_percussion`;
 
         if (dist < 0.07 && (!lastPlayedRef.current[percussionKey] || now - lastPlayedRef.current[percussionKey] > COOLDOWN)) {
-          playSound('percussion');
+          onDrumHit('percussion');
           lastPlayedRef.current[percussionKey] = now;
         }
       });
@@ -96,9 +94,9 @@ const WebcamFeed = () => {
   }, []);
 
   return (
-    <div className="relative w-[640px] h-[480px]">
-      <video ref={videoRef} className="absolute" style={{ display: 'none' }}></video>
-      <canvas ref={canvasRef} className="absolute w-full h-full" width={640} height={480} />
+    <div className="drum-wrapper">
+      <video ref={videoRef} className="hidden" style={{ display: 'none' }}></video>
+      <canvas ref={canvasRef} className="drum-canvas" width={640} height={480} />
     </div>
   );
 };

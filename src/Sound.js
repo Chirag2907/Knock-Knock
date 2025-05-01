@@ -1,4 +1,5 @@
 import { Howl } from 'howler';
+import { Sampler } from 'tone';
 
 const soundMap = {
   snare: new Howl({ src: ['/sounds/snare.wav'], volume: 1 }),
@@ -11,3 +12,8 @@ const soundMap = {
 export const playSound = (type) => {
   soundMap[type]?.play();
 };
+
+export const tickSampler = new Sampler({
+    urls: { C3: '/sounds/tick.mp3' },
+    volume: -10, // ✅ here!
+  }).toDestination();
