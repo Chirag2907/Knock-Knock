@@ -2,7 +2,7 @@ body {
   margin: 0;
   background: #000;
   color: #fff;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 .app-root {
@@ -52,36 +52,7 @@ body {
   scroll-behavior: smooth;
 }
 
-.empty-placeholder{
-  display: flex;
-  align-items: center;
-  margin-top: 2rem;
-  padding: 3rem;
-  opacity: 0.8;
-}
 
-.loop-heading{
-  color: #00ff99;
-  font-size: 1.5rem;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
-.right-panel {
-  width: 100%;
-  padding: 10px;
-  background-color: #111;
-  border: 2px solid #00ff99;
-  border-radius: 8px;
-  box-shadow: 0 0 15px #00ff9966;
-  display: flex;
-  flex-direction: column;
-  height: 98%;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-  padding-right: 8px;
-  scroll-behavior: smooth;
-}
 .left-panel ul {
   list-style: none;
   padding-left: 0;
@@ -102,7 +73,8 @@ body {
   box-shadow: 0 0 20px #00ff99aa;
 }
 
-.center-panel, .drum-wrapper {
+.center-panel,
+.drum-wrapper {
   display: flex;
   flex-direction: column;
   overflow: visible; /* or auto */
@@ -120,7 +92,6 @@ body {
   width: 80%;
   gap: 12px;
 }
-
 
 .instruction-left {
   display: flex;
@@ -151,50 +122,6 @@ body {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-}
-
-.loop-btn {
-  background: #00ff99;
-  color: black;
-  border: none;
-  padding: 8px 16px;
-  margin: 6px 0;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 4px;
-  width: 100%;
-}
-
-.loop-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.loop-list {
-  font-size: 0.8rem;
-  margin-top: 10px;
-  padding-left: 0;
-  list-style: none;
-  max-height: 150px;
-  overflow-y: auto;
-}
-.loop-card {
-  background-color: #0a0a0a;
-  padding: 10px;
-  margin-top: 10px;
-  border: 1px solid #00ff99;
-  border-radius: 6px;
-}
-
-.loop-name {
-  width: 100%;
-  font-weight: bold;
-  padding: 4px;
-  margin-bottom: 6px;
-  border: none;
-  border-radius: 4px;
-  background: #1a1a1a;
-  color: #fff;
 }
 
 .danger {

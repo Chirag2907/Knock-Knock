@@ -2,36 +2,33 @@ import React from "react";
 import { useState } from "react";
 import { playSound, tickSampler } from "../Sound";
 import * as Tone from "tone";
-import "./Features.css";
+import "../Styles/Features.css";
 import { useRef, useEffect } from "react";
 import { analyser } from "../Sound";
 import { Howler } from "howler";
 import { soundMap } from "../Sound";
 
-
-const Features = ({loops}) => {
+const Features = ({ loops }) => {
   const [bpm, setBpm] = useState(120);
   const [isMetronomeOn, setIsMetronomeOn] = useState(false);
   const [beatFlash, setBeatFlash] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-
-
-const exportAllLoopsAutomatically = (loops) => {
+  const exportAllLoopsAutomatically = (loops) => {
     if (loops.length === 0) return;
 
     setIsExporting(true);
-  
+
     const ctx = Howler.ctx;
     const dest = ctx.createMediaStreamDestination();
     const recorder = new MediaRecorder(dest.stream);
     Howler.masterGain.connect(dest);
-  
+
     const chunks = [];
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunks.push(e.data);
     };
-  
+
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: "audio/webm" });
       const url = URL.createObjectURL(blob);
@@ -41,16 +38,16 @@ const exportAllLoopsAutomatically = (loops) => {
       a.click();
       console.log("✅ Exported and downloaded");
     };
-  
+
     recorder.start();
     console.log("🎙 Recording all loops...");
-  
+
     const allEvents = loops.flatMap((loop) =>
       loop.events.map((e) => ({ ...e }))
     );
-  
+
     allEvents.sort((a, b) => a.time - b.time);
-  
+
     allEvents.forEach(({ sound, time, volume }) => {
       setTimeout(() => {
         const sfx = soundMap[sound];
@@ -60,19 +57,18 @@ const exportAllLoopsAutomatically = (loops) => {
         }
       }, time + 50);
     });
-  
+
     const duration = Math.max(...allEvents.map((e) => e.time)) + 500;
-  
+
     setTimeout(() => {
       recorder.stop();
     }, duration);
 
     setTimeout(() => {
-        recorder.stop();
-        setIsExporting(false); // ✅ hide prompt after export
-      }, duration);
+      recorder.stop();
+      setIsExporting(false); // ✅ hide prompt after export
+    }, duration);
   };
-  
 
   const scheduleMetronome = () => {
     Tone.Transport.cancel(); // clear previous ticks
@@ -136,14 +132,14 @@ const exportAllLoopsAutomatically = (loops) => {
 
   return (
     <div className="features">
-        {isExporting && (
-  <div className="export-overlay">
-    <div className="export-message">
-      🎧 Exporting your beat...
-      <div className="loader"></div>
-    </div>
-  </div>
-)}
+      {isExporting && (
+        <div className="export-overlay">
+          <div className="export-message">
+            🎧 Exporting your beat...
+            <div className="loader"></div>
+          </div>
+        </div>
+      )}
 
       <div className="drum-controls">
         <div className="feature-default metronome-controls">
@@ -178,17 +174,19 @@ const exportAllLoopsAutomatically = (loops) => {
             className={`metronome-indicator ${beatFlash ? "flash" : ""}`}
           ></div>
         </div>
-         <div className="feature-default"></div>
+
+        <div className="feature-default"></div>
+        
         <div className="feature-default">
-         <h3>Export</h3>
-            <p>Export all loops as a single audio file.</p>
-            <button
+          <h3>Export</h3>
+          <p>Export all loops as a single audio file.</p>
+          <button
             className="loop-btn"
             onClick={() => exportAllLoopsAutomatically(loops)}
             disabled={loops.length === 0}
-            >
+          >
             📦 Export All Loops
-            </button>
+          </button>
         </div>
       </div>
       <canvas ref={canvasRef} className="visualizer-canvas" />
