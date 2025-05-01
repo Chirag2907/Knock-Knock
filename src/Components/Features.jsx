@@ -124,7 +124,7 @@ const Features = ({ loops }) => {
     };
 
     draw();
-  }, [analyser]); // 🔁 depend on analyser
+  }, [analyser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     playSound("kick");
@@ -176,7 +176,7 @@ const Features = ({ loops }) => {
         </div>
 
         <div className="feature-default"></div>
-        
+
         <div className="feature-default">
           <h3>Export</h3>
           <p>Export all loops as a single audio file.</p>
